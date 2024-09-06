@@ -1,0 +1,277 @@
+---
+title: "ST405_Mini_Project"
+author: "Nipuni"
+date: "2024-04-06"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+#Import Required Libraries
+
+library(tidyverse)
+library(factoextra)
+library(psych)
+library(corrplot)
+library(ggplot2)
+library(skimr)
+library(performance)
+library(GPArotation)
+library(lavaan)
+```
+
+
+```{r}
+# Read the data set
+
+Air_quality <- read_csv("/d/4th year/ST405/Mini Project Practice/AirQualityUCI.csv")
+view(Air_quality)
+```
+```{r}
+# Clean the data set
+
+Air_quality <- Air_quality[, -c(1,2,16,17)]
+view(Air_quality)
+
+missing_count <- colSums(is.na(Air_quality))
+missing_count
+
+
+Air_quality <- na.omit(Air_quality)
+
+```
+```{r}
+#Summary of the data set
+
+summary(Air_quality)
+```
+```{r}
+#Structure of the data set
+
+str(Air_quality)
+```
+
+
+
+```{r}
+#Dimension of the data set
+
+dim(Air_quality)
+```
+
+
+```{r}
+number_obsevations<- nrow(Air_quality)
+number_obsevations
+```
+
+
+```{r}
+#Covariance Matrix
+
+Cov_air_quality <- cov(Air_quality)
+cov(Air_quality)
+```
+
+```{r}
+# Standardized Data
+Cor_air_quality <- cor(Air_quality)
+Cor_air_quality
+
+#Correlation plot
+corrplot(Cor_air_quality, method = "color", type = "upper", order = "original", 
+         tl.cex = 0.7, tl.col = "black", col = colorRampPalette(c("blue", "white", "red"))(200))
+```
+```{r}
+#Apply KMO Test
+
+KMO(Air_quality)
+
+```
+```{r}
+#calculate Eigenvalues & Eigenvectors
+
+eigen_air_quality <- eigen(Cor_air_quality)
+
+#extract eigenvalues
+eigenvalues <- eigen_air_quality$values
+round(eigenvalues,4)
+
+#extract eigenvectors
+eigenvectors <- eigen_air_quality$vectors
+eigenvectors
+
+```
+
+
+```{r}
+#Variance explained 
+varianced_explained <- eigenvalues/sum(eigenvalues)
+round(varianced_explained,4)
+
+varianced_explained_prop <- varianced_explained*100
+round(varianced_explained_prop,4)
+```
+
+
+```{r}
+#Explained Cumulative Proportion
+
+cummulative_varianced_explained <-cumsum(varianced_explained)
+round(cummulative_varianced_explained,4)
+
+cummulative_varianced_explained_prop <- cummulative_varianced_explained*100
+round(cummulative_varianced_explained_prop,4)
+```
+
+
+```{r}
+#scree plot
+num_eigenvalues <- 1:length(varianced_explained_prop)
+
+plot(num_eigenvalues, varianced_explained_prop,type = "b", 
+     xlab = "Number of Eigenvalues", ylab = "Proportion of Variance Explained",
+     main = "Scree Plot",col = "blue") + axis(1, at = num_eigenvalues)
+
+```
+
+
+```{r}
+#Factor Analysis from "Principal Component method"
+
+air_quality_PC<- fa(Cor_air_quality ,nfactors =4 ,rotate = "none",n.obs 
+= nrow(Air_quality) ,covar = TRUE,fm = "pa")
+air_quality_PC
+
+```
+
+
+```{r}
+#Get unrotated loading from PC method
+unrotated_pc_loadings <-
+as.data.frame(unclass(air_quality_PC$loadings))
+round(unrotated_pc_loadings,4)
+
+
+```
+
+
+```{r}
+#Communalities
+
+unrotated_pc_com <- as.data.frame(unclass(air_quality_PC$communality))
+round(unrotated_pc_com,4)
+
+```
+
+
+```{r}
+#Factor Analysis from "Maximum Likelihood Method"
+
+air_quality_ML <- fa(Cor_air_quality,nfactors = 4,rotate = "none",n.obs 
+= nrow(Air_quality) , covar = TRUE, fm = 'ml')
+air_quality_ML
+
+
+```
+
+
+```{r}
+#Get unrotated ML loadings
+unrotated_ml_loadings <-
+as.data.frame(unclass(air_quality_ML$loadings))
+round(unrotated_ml_loadings,4)
+```
+
+```{r}
+#Communalities
+
+unrotated_ml_com <- as.data.frame(unclass(air_quality_ML$communality))
+round(unrotated_ml_com,4)
+      
+```
+
+
+```{r}
+# Rotate the Pc method factor loadings using "Varimax" method
+
+air_quality_PC_rotate <- fa(Cor_air_quality ,nfactors = 4,rotate =
+"varimax",n.obs = nrow(Air_quality) ,covar = TRUE,fm = 'pa')
+air_quality_PC_rotate
+
+rotated_pc_loadings <-
+as.data.frame(unclass(air_quality_PC_rotate$loadings))
+round(rotated_pc_loadings,4)
+
+```
+
+
+```{r}
+#Rotated Pc communalities
+
+rotated_pc_com <-
+as.data.frame(unclass(air_quality_PC_rotate$communality))
+round(rotated_pc_com,4)
+
+```
+
+
+```{r}
+#Graph Factor Loading Matrices
+
+fa.diagram(air_quality_PC_rotate)
+
+
+```
+
+
+```{r}
+variables<-Air_quality
+
+new_names <- c(
+  "PT08.S5(O3)" = "PT08_S5_O3",
+  "PT08.S1(CO)" = "PT08_S1_CO",
+  "PT08.S4(NO2)" = "PT08_S4_NO2",
+  "PT08.S3(NOx)" = "PT08_S3_NOX",
+  "AH" = "AH",
+  "T" = "T",
+  "RH" = "RH",
+  "C6H6(GT)" = "C6H6_GT",
+  "NO2(GT)" = "NO2_GT",
+  "NOx(GT)" = "NOX_GT",
+  "CO(GT)" = "CO_GT",
+  "NMHC(GT)" = "NMHC_GT",
+  "PT08.S2(NMHC)"="PT08_S2_NMHC"
+)
+
+colnames(variables)<-new_names
+
+variables<-scale(variables)
+
+any(is.na(variables))
+
+library(semPlot)
+
+model <- model <-model <- ' 
+Factor1 =~ PT08_S2_NMHC + PT08_S5_O3 + PT08_S1_CO + PT08_S4_NO2
+Factor2 =~ NO2_GT + NOX_GT + CO_GT
+Factor3 =~ PT08_S3_NOX + AH + T +RH + C6H6_GT
+Factor4 =~ NMHC_GT
+'
+
+fit <- cfa(model, data = variables)
+
+summary(fit,fit.measures = TRUE)
+
+
+```
+
+
+
+
+
+
+  
